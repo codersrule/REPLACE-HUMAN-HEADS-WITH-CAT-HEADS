@@ -1,5 +1,4 @@
 #2025/11/15 ECPS205 Final Project... KEVIN_LEE
-
 from cam import CameraController
 import time as time
 
