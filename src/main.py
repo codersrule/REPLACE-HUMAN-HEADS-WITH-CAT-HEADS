@@ -1,6 +1,12 @@
 #2025/11/15 ECPS205 Final Project... KEVIN_LEE
 from cam import CameraController
 import time as time
+from cat import make_cat, remove_white_bg, cat_paste
+import cv2 as cv
+import numpy as np
+
+POS_X = 200
+POS_Y = 150
 
 def main():
     print("Commands: [S]: Take shot, [Q]: Quit, [L]: List files\n")
@@ -8,11 +14,32 @@ def main():
     cam0 = CameraController(0, False)
     cam0.start_preview()
     
+    # ---- YOU control these ----
+    POS_X = 200   # change this later
+    POS_Y = 150   # change this later
+    # --------------------------
+
+    sprite = cv.imread("cat.png", cv.IMREAD_UNCHANGED)
+    corp_cat = make_cat(sprite, 5)      # choose which cat
+    cat = remove_white_bg(corp_cat)     # make background transparent
+
+    # Resize if you want
+    cat = cv.resize(cat, (120, 120))
+
     try:
         while True:
-            cmd = cam0.take_shot()
-            
-            if cmd == "q":
+            # Capture live frame
+            frame = cam0.picam.capture_array("main")
+
+            # Paste cat on the frame
+            frame = cat_paste(frame, cat, POS_X, POS_Y)
+
+            # Show result
+            cv.imshow("Camera with Cat", frame)
+
+            # Check for key press (q quits)
+            key = cv.waitKey(1) & 0xFF
+            if key == ord('q'):
                 break
     except KeyboardInterrupt:
         print("\n\nInterrupted by user...")

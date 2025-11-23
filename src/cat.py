@@ -1,0 +1,73 @@
+import cv2 as cv
+import numpy as np
+
+address = [
+    "cat.png",
+]
+
+img = cv.imread(address[0], cv.IMREAD_UNCHANGED)
+
+def make_cat(img, number): 
+    h= 997; 
+    w = 1000; 
+    y = [0, int(h/4-60), int(h/2-60), int(3*h/4-80), int(h-80)] 
+    x = [0, int(w/4), int(w/2), int(3*w/4), int(w)] 
+
+    i = number // 4
+    j = number % 4
+
+    smaller_img = img[y[j]:y[j+1], x[i]:x[i+1], :]
+
+    return smaller_img
+
+def remove_white_bg(img):
+    # If image already has 4 channels, convert to BGR first
+    if img.shape[2] == 4:
+        bgr = cv.cvtColor(img, cv.COLOR_BGRA2BGR)
+    else:
+        bgr = img
+
+    # Convert to BGRA (add alpha channel)
+    rgba = cv.cvtColor(bgr, cv.COLOR_BGR2BGRA)
+
+    white = np.array([255, 255, 255], dtype=np.uint8)
+    tolerance = 10
+
+    lower = white - tolerance
+    upper = white + tolerance
+
+    # Create mask where pixels are near white
+    mask = cv.inRange(bgr, lower, upper)
+
+    # Make white pixels transparent
+    rgba[mask == 255] = (0, 0, 0, 0)
+
+    return rgba
+
+
+def cat_paste(bg, fg, x, y):
+    h, w = fg.shape[:2]
+
+    # Boundary safety
+    if x + w > bg.shape[1] or y + h > bg.shape[0]:
+        return bg
+
+    b, g, r, a = cv.split(fg)
+    alpha = a / 255.0
+
+    for c in range(3):
+        bg[y:y+h, x:x+w, c] = (
+            alpha * fg[:, :, c] +
+            (1 - alpha) * bg[y:y+h, x:x+w, c]
+        )
+    return bg
+
+'''this would corp a cat head and make teh white background transprant
+    corp_cat = make_cat(img, 5)     # Crop one cat face
+    cat = remove_white_bg(corp_cat)
+    # Display the cropped image
+    cv.imshow("Cropped Cat", cat)
+    cv.waitKey(0)
+    print(cat.shape)
+    cv.destroyAllWindows()
+'''
