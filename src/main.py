@@ -13,8 +13,7 @@ def main():
     
     cam0 = CameraController(0, False)
     cam0.start_preview()
-    time.sleep(5)
-    cam0.stop_preview()
+    
     # ---- YOU control these ----
     POS_X = 200   # change this later
     POS_Y = 150   # change this later
@@ -57,6 +56,9 @@ def main():
             if not filename.endswith('.npz'):
                 filename += '.npz'
             cam0.save_shots_to_file(filename)
+    
+    time.sleep(1)
+    cam0.stop_preview()
     
     print(f"Session complete. Total shots captured: {len(cam0.get_all_shots())}")
 

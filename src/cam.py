@@ -24,11 +24,11 @@ class CameraController:
                 if display and 'localhost' in display:
                     # Remote X11 - use QT
                     print("Using QT preview for X11 forwarding...")
-                    self.picam.start_preview(Preview.QT)
+                    #self.picam.start_preview(Preview.QT)
                 elif display:
                     # Local display - try QTGL first
                     print("Using QTGL preview...")
-                    self.picam.start_preview(Preview.QTGL)
+                    #self.picam.start_preview(Preview.QTGL)
                 else:
                     # No display - run headless
                     print("No display detected, running headless...")
