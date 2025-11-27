@@ -15,17 +15,35 @@ def main():
     cam0.start_preview()
     
     # ---- YOU control these ----
-    POS_X = 200   # change this later
-    POS_Y = 150   # change this later
+    POS_X1 = 200   # change this later
+    POS_Y1 = 150   # change this later
+    POS_X2 = 300   # change this later
+    POS_Y2 = 100   # change this later
+    POS_X3 = 100   # change this later
+    POS_Y3 = 300   # change this later
     # --------------------------
 
     sprite = cv.imread("cat.png", cv.IMREAD_UNCHANGED)
-    corp_cat = make_cat(sprite, 9)      # choose which cat
-    cat = remove_white_bg(corp_cat)     # make background transparent
+    corp_cat = make_cat(sprite, 3)      # choose which cat
+    cat1 = remove_white_bg(corp_cat)     # make background transparent
 
     # Resize if you want
-    cat = cv.resize(cat, (200, 200))
+    cat1 = cv.resize(cat1, (100, 100))
 
+    sprite = cv.imread("cat.png", cv.IMREAD_UNCHANGED)
+    corp_cat = make_cat(sprite, 9)      # choose which cat
+    cat2 = remove_white_bg(corp_cat)     # make background transparent
+
+    # Resize if you want
+    cat2 = cv.resize(cat2, (200, 200))
+    
+    sprite = cv.imread("cat.png", cv.IMREAD_UNCHANGED)
+    corp_cat = make_cat(sprite, 7)      # choose which cat
+    cat3 = remove_white_bg(corp_cat)     # make background transparent
+
+    # Resize if you want
+    cat3 = cv.resize(cat3, (150, 150))
+    
     try:
         while True:
             # Capture live frame
@@ -35,7 +53,9 @@ def main():
             frame = cv.cvtColor(frame, cv.COLOR_RGB2BGR)
 
             # Paste cat on the frame
-            frame = cat_paste(frame, cat, POS_X, POS_Y)
+            frame = cat_paste(frame, cat1, POS_X1, POS_Y1)
+            frame = cat_paste(frame, cat2, POS_X2, POS_Y2)
+            frame = cat_paste(frame, cat3, POS_X3, POS_Y3)
 
             # Show result
             cv.imshow("Camera with Cat", frame)
