@@ -20,11 +20,11 @@ def main():
     # --------------------------
 
     sprite = cv.imread("cat.png", cv.IMREAD_UNCHANGED)
-    corp_cat = make_cat(sprite, 5)      # choose which cat
+    corp_cat = make_cat(sprite, 9)      # choose which cat
     cat = remove_white_bg(corp_cat)     # make background transparent
 
     # Resize if you want
-    cat = cv.resize(cat, (120, 120))
+    cat = cv.resize(cat, (200, 200))
 
     try:
         while True:

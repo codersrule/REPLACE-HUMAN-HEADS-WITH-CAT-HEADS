@@ -21,26 +21,24 @@ def make_cat(img, number):
     return smaller_img
 
 def remove_white_bg(img):
-    # If image already has 4 channels, convert to BGR first
+    # Force BGR
     if img.shape[2] == 4:
         bgr = cv.cvtColor(img, cv.COLOR_BGRA2BGR)
     else:
-        bgr = img
+        bgr = img.copy()
 
-    # Convert to BGRA (add alpha channel)
+    # Convert to HSV
+    hsv = cv.cvtColor(bgr, cv.COLOR_BGR2HSV)
+    h, s, v = cv.split(hsv)
+
+    # White = high brightness, very low saturation
+    mask = (s < 25) & (v > 180)
+
+    # Add alpha channel
     rgba = cv.cvtColor(bgr, cv.COLOR_BGR2BGRA)
 
-    white = np.array([255, 255, 255], dtype=np.uint8)
-    tolerance = 10
-
-    lower = white - tolerance
-    upper = white + tolerance
-
-    # Create mask where pixels are near white
-    mask = cv.inRange(bgr, lower, upper)
-
-    # Make white pixels transparent
-    rgba[mask == 255] = (0, 0, 0, 0)
+    # Make white transparent
+    rgba[mask] = (0, 0, 0, 0)
 
     return rgba
 
