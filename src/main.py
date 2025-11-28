@@ -1,89 +1,190 @@
 #2025/11/15 ECPS205 Final Project... KEVIN_LEE
-from cam import CameraController
-import time as time
-from cat import make_cat, remove_white_bg, cat_paste
-import cv2 as cv
-import numpy as np
 
-POS_X = 200
-POS_Y = 150
+from cam import CameraController
+from cat import load_all_cats
+from face_detection import FaceDetector
+from head_swap import HeadSwapper
+import cv2 as cv
+import time
+import os
+
+
+# Output directory for saved images
+OUTPUT_DIR = "outputs"
+
+
+def create_output_dir():
+    """Create outputs directory if it doesn't exist"""
+    if not os.path.exists(OUTPUT_DIR):
+        os.makedirs(OUTPUT_DIR)
+        print(f"Created output directory: {OUTPUT_DIR}")
+
 
 def main():
-    print("Commands: [S]: Take shot, [Q]: Quit, [L]: List files\n")
+    # Create output directory
+    create_output_dir()
     
+    print("\nInitializing components...")
+    
+    # Initialize camera
+    print("\n1. Starting camera...")
     cam0 = CameraController(0, False)
     cam0.start_preview()
     
-    # ---- YOU control these ----
-    POS_X1 = 200   # change this later
-    POS_Y1 = 150   # change this later
-    POS_X2 = 300   # change this later
-    POS_Y2 = 100   # change this later
-    POS_X3 = 100   # change this later
-    POS_Y3 = 300   # change this later
-    # --------------------------
-
-    sprite = cv.imread("cat.png", cv.IMREAD_UNCHANGED)
-    corp_cat = make_cat(sprite, 3)      # choose which cat
-    cat1 = remove_white_bg(corp_cat)     # make background transparent
-
-    # Resize if you want
-    cat1 = cv.resize(cat1, (100, 100))
-
-    sprite = cv.imread("cat.png", cv.IMREAD_UNCHANGED)
-    corp_cat = make_cat(sprite, 9)      # choose which cat
-    cat2 = remove_white_bg(corp_cat)     # make background transparent
-
-    # Resize if you want
-    cat2 = cv.resize(cat2, (200, 200))
+    # Load cat faces
+    print("\n2. Loading cat sprites...")
+    try:
+        cat_faces = load_all_cats("cat.png")
+        print(f"Loaded {len(cat_faces)} cat faces")
+    except Exception as e:
+        print(f"Error loading cats: {e}")
+        cam0.stop_preview()
+        return
     
-    sprite = cv.imread("cat.png", cv.IMREAD_UNCHANGED)
-    corp_cat = make_cat(sprite, 7)      # choose which cat
-    cat3 = remove_white_bg(corp_cat)     # make background transparent
-
-    # Resize if you want
-    cat3 = cv.resize(cat3, (150, 150))
+    # Initialize face detector
+    print("\n3. Initializing face detector...")
+    try:
+        face_detector = FaceDetector()
+    except Exception as e:
+        print(f" Error initializing face detector: {e}")
+        cam0.stop_preview()
+        return
+    
+    # Initialize head swapper
+    print("\n4. Initializing head swapper...")
+    head_swapper = HeadSwapper(cat_faces, scale_factor=1.3)
+    
+    print("\n" + "-"*60)
+    print("LIVE TRACKING WINDOW - Press keys for controls:")
+    print("  [Q] - Quit")
+    print("  [S] - Save screenshot")
+    print("  [C] - Change cat set")
+    print("  [+] - Increase cat size")
+    print("  [-] - Decrease cat size")
+    print("  [D] - Toggle debug mode (show face boxes)")
+    print("-"*60 + "\n")
+    
+    # Stats
+    frame_count = 0
+    start_time = time.time()
+    screenshot_count = 0
+    debug_mode = False
+    
+    # Create window with properties
+    window_name = "Cat Head Swap - Live Tracking"
+    cv.namedWindow(window_name, cv.WINDOW_NORMAL)
+    cv.resizeWindow(window_name, 720, 720)
     
     try:
         while True:
-            # Capture live frame
-            frame = cam0.picam.capture_array("main")
-
-            #RGB to BGR
+            # Capture frame from camera
+            frame = cam0.capture_frame()
+            
+            # Convert RGB to BGR for OpenCV
             frame = cv.cvtColor(frame, cv.COLOR_RGB2BGR)
-
-            # Paste cat on the frame
-            frame = cat_paste(frame, cat1, POS_X1, POS_Y1)
-            frame = cat_paste(frame, cat2, POS_X2, POS_Y2)
-            frame = cat_paste(frame, cat3, POS_X3, POS_Y3)
-
-            # Show result
-            cv.imshow("Camera with Cat", frame)
-
-            # Check for key press (q quits)
+            
+            # Detect faces
+            faces = face_detector.detect_faces(
+                frame,
+                scale_factor=1.1,
+                min_neighbors=5,
+                min_size=(50, 50)
+            )
+            
+            # Debug mode: show face boxes BEFORE swapping
+            if debug_mode:
+                # Draw boxes in red to show original detection
+                for (x, y, w, h) in faces:
+                    cv.rectangle(frame, (x, y), (x+w, y+h), (0, 0, 255), 2)
+                    # Draw center point
+                    center_x = x + w // 2
+                    center_y = y + h // 2
+                    cv.circle(frame, (center_x, center_y), 5, (0, 0, 255), -1)
+            
+            # Swap heads with cats
+            frame = head_swapper.swap_heads(frame, faces)
+            
+            # Calculate FPS
+            frame_count += 1
+            elapsed = time.time() - start_time
+            fps = frame_count / elapsed if elapsed > 0 else 0
+            
+            # Create info panel at top of frame
+            info_height = 180
+            info_panel = frame[0:info_height, :].copy()
+            # Semi-transparent overlay
+            overlay = info_panel.copy()
+            cv.rectangle(overlay, (0, 0), (frame.shape[1], info_height), (0, 0, 0), -1)
+            cv.addWeighted(overlay, 0.6, info_panel, 0.4, 0, info_panel)
+            frame[0:info_height, :] = info_panel
+            
+            # Display info with better formatting
+            cv.putText(frame, f"Faces Detected: {len(faces)}", (10, 75),
+                      cv.FONT_HERSHEY_SIMPLEX, 1.0, (0, 255, 0), 2)
+            cv.putText(frame, f"Cat Set: {head_swapper.current_cat_set}", (10, 115),
+                      cv.FONT_HERSHEY_SIMPLEX, 1.0, (0, 255, 0), 2)
+            cv.putText(frame, f"Scale: {head_swapper.scale_factor:.1f}x", (10, 155),
+                      cv.FONT_HERSHEY_SIMPLEX, 1.0, (0, 255, 0), 2)
+            
+            if debug_mode:
+                cv.putText(frame, "DEBUG MODE - RED BOXES", (400, 35),
+                          cv.FONT_HERSHEY_SIMPLEX, 1.0, (0, 0, 255), 2)
+            
+            # Show live tracking window
+            cv.imshow(window_name, frame)
+            
+            # Handle key presses
             key = cv.waitKey(1) & 0xFF
+            
             if key == ord('q'):
+                print("\nQuitting...")
                 break
+            
+            elif key == ord('s'):
+                filename = os.path.join(OUTPUT_DIR, f"headswap_{screenshot_count:03d}.jpg")
+                cv.imwrite(filename, frame)
+                print(f" Screenshot saved: {filename}")
+                screenshot_count += 1
+            
+            elif key == ord('c'):
+                cat_set = head_swapper.change_cat_set()
+                print(f"Changed to cat set: {cat_set}")
+            
+            elif key == ord('+') or key == ord('='):
+                new_scale = head_swapper.scale_factor + 0.1
+                head_swapper.set_scale_factor(new_scale)
+            
+            elif key == ord('-') or key == ord('_'):
+                new_scale = head_swapper.scale_factor - 0.1
+                head_swapper.set_scale_factor(new_scale)
+            
+            elif key == ord('d'):
+                debug_mode = not debug_mode
+                print(f"Debug mode: {'ON' if debug_mode else 'OFF'}")
+    
     except KeyboardInterrupt:
-        print("\n\nInterrupted by user...")
+        print("\nInterrupted by user...")
     
-    print("\nStopping camera application....")
+    except Exception as e:
+        print(f"\nError: {e}")
+        import traceback
+        traceback.print_exc()
     
-    # Save arrays if any were captured
-    if len(cam0.get_all_shots()) > 0:
-        save = input(f"\nSave {len(cam0.get_all_shots())} captured arrays to .npz file? [Y/N]: ").lower()
-        if save == "y":
-            filename = input("Enter filename (default: shots_data.npz): ").strip()
-            if not filename:
-                filename = "shots_data.npz"
-            if not filename.endswith('.npz'):
-                filename += '.npz'
-            cam0.save_shots_to_file(filename)
-    
-    time.sleep(1)
-    cam0.stop_preview()
-    
-    print(f"Session complete. Total shots captured: {len(cam0.get_all_shots())}")
+    finally:
+        # Cleanup and summary
+        print("\n" + "-"*60)
+        print("SUMMARY")
+        print("-"*60)
+        print(f"Screenshots saved: {screenshot_count}")
+
+        if screenshot_count > 0:
+            print(f"Output folder: {OUTPUT_DIR}/")
+        print("-"*60 + "\n")
+        
+        print("Stopping camera...")
+        time.sleep(1)
+        cam0.stop_preview()
+        cv.destroyAllWindows()
 
 
 if __name__ == "__main__":

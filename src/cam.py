@@ -5,7 +5,7 @@ import os
 import numpy as np
 
 class CameraController:
-    def __init__(self, camid = 0, preview = False):
+    def __init__(self, camid=0, preview=False):
         """Init Camera"""
         self.camid = camid
         self.picam = Picamera2(camid)
@@ -15,7 +15,7 @@ class CameraController:
         print("Camera Init\n")
     
     def start_preview(self):
-        
+        """Start camera in headless or preview mode"""
         if not self.preview:
             # Try different preview modes based on environment
             display = os.environ.get('DISPLAY', '')
@@ -40,9 +40,9 @@ class CameraController:
             time.sleep(1)
             self.preview = True
             print("Camera started\n")
-            
+    
     def stop_preview(self):
-        
+        """Stop camera"""
         if self.preview:
             try:
                 self.picam.stop_preview()
@@ -51,9 +51,15 @@ class CameraController:
             self.picam.stop()
             self.preview = False
             print("Camera stopped\n")
-            
+    
+    def capture_frame(self):
+        """Capture a single frame and return it as numpy array"""
+        if not self.preview:
+            self.start_preview()
+        return self.picam.capture_array("main")
+    
     def take_shot(self):
-        
+        """Interactive shot capture mode"""
         self.start_preview()
         take = input(r"[S] to take a shot >o<...[Q] to end App...[L] to list shots...")
         take = take.lower()
@@ -69,9 +75,6 @@ class CameraController:
             
             print(f"Shot {self.imgid} captured")
             print(f"File: {filename}")
-            print(f"Array: shape={img_array.shape}, dtype={img_array.dtype}")
-            print(f"Memory: {img_array.nbytes/1024:.1f} KB")
-            print(f"Total shots in memory: {len(self.shot_arrays)}")
             self.imgid += 1
             
         elif take == "l":
